@@ -160,16 +160,38 @@ fn new_game(mut commands: Commands, font: Res<TextFont>) {
     let spacing = 100f32;
     let offset = Vec2::new(-((operations.len() - 1) as f32 * spacing) / 2f32, -50f32);
     for (x, op) in operations.iter().enumerate() {
+        let mut op_commands = commands.spawn_bundle(Text2dBundle {
+            text: Text::from_section(format!("{op}"), text_style.clone())
+                .with_alignment(text_alignment),
+            transform: Transform::from_translation(
+                (Vec2::new(x as f32 * spacing, 0f32) + offset).extend(20f32),
+            ),
+            ..default()
+        });
+        op_commands.insert(op.clone());
+
+        let mut visual_entity = None;
+        op_commands.with_children(|parent| {
+            visual_entity = Some(
+                parent
+                    .spawn_bundle(SpriteBundle {
+                        sprite: Sprite {
+                            color: Color::YELLOW_GREEN,
+                            custom_size: Some(Vec2::splat(50f32)),
+                            ..default()
+                        },
+                        transform: Transform::from_translation(Vec2::ZERO.extend(-1f32)),
+                        visibility: Visibility { is_visible: false },
+                        ..default()
+                    })
+                    .id(),
+            );
+        });
+
+        let op_entity = op_commands.id();
         commands
-            .spawn_bundle(Text2dBundle {
-                text: Text::from_section(format!("{op}"), text_style.clone())
-                    .with_alignment(text_alignment),
-                transform: Transform::from_translation(
-                    (Vec2::new(x as f32 * spacing, 0f32) + offset).extend(20f32),
-                ),
-                ..default()
-            })
-            .insert(op.clone());
+            .entity(op_entity)
+            .insert(SelectionVisual(visual_entity.unwrap()));
     }
 }
 
@@ -309,31 +331,37 @@ fn handle_clicks(
 fn visibility_selection(
     mut play_round: ResMut<PlayRound>,
     q_selectable: Query<(Entity, &SelectionVisual, Option<&Operation>)>,
-    mut q_visibility: Query<&mut Visibility>,
+    mut q_visibility: Query<(&mut Visibility, &mut Sprite)>,
 ) {
     if play_round.is_changed() {
         for (e, v, op) in q_selectable.iter() {
             if let Some(n1) = &play_round.number1 {
                 if n1.entity == e {
-                    q_visibility.get_mut(v.0).unwrap().is_visible = true;
+                    let mut res = q_visibility.get_mut(v.0).unwrap();
+                    res.0.is_visible = true;
+                    res.1.color = Color::GREEN;
                     continue;
                 }
             }
             if let Some(n2) = &play_round.number2 {
                 if n2.entity == e {
-                    q_visibility.get_mut(v.0).unwrap().is_visible = true;
+                    let mut res = q_visibility.get_mut(v.0).unwrap();
+                    res.0.is_visible = true;
+                    res.1.color = Color::BLUE;
                     continue;
                 }
             }
             if let Some(op) = op {
                 if let Some(selected_op) = &play_round.operation {
                     if selected_op == op {
-                        q_visibility.get_mut(v.0).unwrap().is_visible = true;
+                        let mut res = q_visibility.get_mut(v.0).unwrap();
+                        res.0.is_visible = true;
+                        res.1.color = Color::YELLOW_GREEN;
                         continue;
                     }
                 }
             }
-            q_visibility.get_mut(v.0).unwrap().is_visible = false;
+            q_visibility.get_mut(v.0).unwrap().0.is_visible = false;
         }
     }
 }
