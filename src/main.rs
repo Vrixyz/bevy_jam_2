@@ -18,7 +18,7 @@ fn main() {
         .add_plugin(JornetPlugin::with_leaderboard(
             option_env!("JORNET_LEADERBOARD_ID").unwrap_or("429cd002-f885-4d62-8d07-1f556e4e110e"),
             option_env!("JORNET_LEADERBOARD_SECRET")
-                .unwrap_or("eb1ccf59-f519-4be0-a113-db4059813922"),
+                .unwrap_or("5577ec38-4a60-46eb-8498-b810323fccb8"),
         ))
         .add_plugin(ParticlesPlugin)
         .add_plugin(CursorPlugin)
