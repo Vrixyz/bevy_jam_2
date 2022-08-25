@@ -4,12 +4,17 @@ use bevy::{
     math::Vec3Swizzles,
     prelude::*,
 };
-use rand::Rng;
+use rand::{rngs::SmallRng, Rng, SeedableRng};
 
 pub struct GamePlugin;
 
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
+        app.insert_resource(Level {
+            seed: rand::thread_rng().gen_range(u64::MIN..=u64::MAX),
+            level_index: 0,
+        });
+        app.insert_resource(GameResult::default());
         app.add_system_set(SystemSet::on_enter(GameState::Game).with_system(new_game))
             .add_system_set(
                 SystemSet::on_update(GameState::Game)
@@ -20,6 +25,17 @@ impl Plugin for GamePlugin {
             )
             .add_system_set(SystemSet::on_exit(GameState::Game).with_system(despawn_game));
     }
+}
+
+pub struct Level {
+    seed: u64,
+    pub level_index: u64,
+}
+
+#[derive(Default)]
+pub struct GameResult {
+    pub last_number: f32,
+    pub target_number: f32,
 }
 
 #[derive(Component, Debug, PartialEq, Clone)]
@@ -112,19 +128,60 @@ fn despawn_game(
     }
 }
 
-fn new_game(mut commands: Commands, font: Res<TextFont>) {
-    // TODO: use a cross platform rand
-    let mut rand = rand::thread_rng();
+fn lerp(start_value: f32, end_value: f32, ratio: f32) -> f32 {
+    start_value + (end_value - start_value) * ratio
+}
+
+fn new_game(mut commands: Commands, level: Res<Level>, font: Res<TextFont>) {
+    let mut rand = SmallRng::seed_from_u64(level.seed.wrapping_add(level.level_index));
     let mut numbers = vec![];
-    for _ in 0..10 {
-        numbers.push(rand.gen_range(0..=10));
+
+    let number_count = usize::clamp(
+        lerp(2f32, 10f32, (level.level_index as f32 + 1f32) / 20f32) as usize,
+        2,
+        10,
+    );
+    let number_range = 1..=10;
+
+    for _ in 0..number_count {
+        numbers.push(rand.gen_range(number_range.clone()));
     }
     commands.insert_resource(Inventory {
         numbers: numbers.iter().map(|n| *n as f32).collect(),
     });
 
+    let mut operations = vec![
+        Operation::Plus,
+        Operation::Minus,
+        Operation::Multiply,
+        Operation::Divide,
+    ];
+    let operation_count = usize::clamp(
+        lerp(1f32, 4f32, (level.level_index as f32 + 2f32) / 8f32) as usize,
+        1,
+        4,
+    );
+    operations = operations.drain(..operation_count).collect();
+
+    let mut numbers_to_simulate: Vec<f32> = numbers.iter().map(|v| *v as f32).collect();
+    use rand::seq::SliceRandom;
+    while numbers_to_simulate.len() > 1 {
+        let chosen_indexes: Vec<usize> = (0..numbers_to_simulate.len())
+            .collect::<Vec<usize>>()
+            .choose_multiple(&mut rand, 2)
+            .cloned()
+            .collect();
+        if let Ok(new_number) = operations.choose(&mut rand).unwrap().apply(
+            numbers_to_simulate[chosen_indexes[0]],
+            numbers_to_simulate[chosen_indexes[1]],
+        ) {
+            numbers_to_simulate[chosen_indexes[0]] = new_number;
+            numbers_to_simulate.remove(chosen_indexes[1]);
+        }
+    }
     // TODO: simulate operations + end up on a doable target
-    let target = rand.gen_range(-1000..=1000);
+    let target = numbers_to_simulate[0];
+
     commands.insert_resource(TargetNumber {
         target: target as f32,
     });
@@ -149,12 +206,6 @@ fn new_game(mut commands: Commands, font: Res<TextFont>) {
         })
         .insert(GameEntity);
 
-    let operations = vec![
-        Operation::Plus,
-        Operation::Minus,
-        Operation::Multiply,
-        Operation::Divide,
-    ];
     let spacing = 100f32;
     let offset = Vec2::new(-((operations.len() - 1) as f32 * spacing) / 2f32, -50f32);
     for (x, op) in operations.iter().enumerate() {
@@ -365,11 +416,13 @@ fn visibility_selection(
 }
 
 fn react_play_round(
-    mut mouse_button_input_events: EventReader<MouseButtonInput>,
     mut particles: EventWriter<ParticleExplosion>,
     mut inventory: ResMut<Inventory>,
     mut play_round: ResMut<PlayRound>,
     mut state: ResMut<State<GameState>>,
+    // TODO: shoud be in the done state
+    mut game_result: ResMut<GameResult>,
+    target: Res<TargetNumber>,
 ) {
     if play_round.is_changed() {
         if let PlayRound {
@@ -391,8 +444,10 @@ fn react_play_round(
                     color: Color::ANTIQUE_WHITE,
                 });
                 if inventory.numbers.len() == 1 {
-                    // TODO: Delay, then show "done" screen
-                    let _ = state.set(GameState::Menu);
+                    game_result.target_number = target.target;
+                    game_result.last_number = inventory.numbers[0];
+
+                    let _ = state.set(GameState::Done);
                 }
             } else {
                 play_round.as_mut().reset();

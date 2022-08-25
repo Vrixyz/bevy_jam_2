@@ -1,12 +1,12 @@
 use bevy::prelude::*;
 use bevy_jornet::Leaderboard;
 
-use crate::{GameState, TextFont};
+use crate::{game::Level, GameState, TextFont};
 pub struct MenuPlugin;
 
-const BACKGROUND: &str = "439775";
+const BACKGROUND: &str = "339755";
 const BUTTON: &str = "2A4747";
-const TEXT: &str = "8ecae6";
+const TEXT: &str = "BeDaD6";
 
 #[derive(Component)]
 struct MenuUI;
@@ -23,7 +23,12 @@ impl Plugin for MenuPlugin {
     }
 }
 
-fn display_menu(mut commands: Commands, font: Res<TextFont>, leaderboard: Res<Leaderboard>) {
+fn display_menu(
+    mut commands: Commands,
+    font: Res<TextFont>,
+    leaderboard: Res<Leaderboard>,
+    level: Res<Level>,
+) {
     commands
         .spawn_bundle(NodeBundle {
             style: Style {
@@ -44,6 +49,14 @@ fn display_menu(mut commands: Commands, font: Res<TextFont>, leaderboard: Res<Le
                 TextStyle {
                     font: font.0.clone(),
                     font_size: 60.0,
+                    color: Color::hex(TEXT).unwrap(),
+                },
+            ));
+            parent.spawn_bundle(TextBundle::from_section(
+                format!("Level {}", level.level_index + 1),
+                TextStyle {
+                    font: font.0.clone(),
+                    font_size: 30.0,
                     color: Color::hex(TEXT).unwrap(),
                 },
             ));

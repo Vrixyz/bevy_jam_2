@@ -8,7 +8,8 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-
+  JORNET_LEADERBOARD_ID: ${{ secrets.JORNET_LEADERBOARD_ID }}
+  JORNET_LEADERBOARD_SECRET: ${{ secrets.JORNET_LEADERBOARD_SECRET }}
 jobs:
 
   # Run cargo test
