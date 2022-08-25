@@ -16,7 +16,7 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugin(JornetPlugin::with_leaderboard(
-            option_env!("JORNET_LEADERBOARD_ID").unwrap_or("429cd002-f885-4d62-8d07-1f556e4e110e"),
+            option_env!("JORNET_LEADERBOARD_ID").unwrap_or("5d4b1eb9-0ca8-40a5-84ec-77551b8632b6"),
             option_env!("JORNET_LEADERBOARD_SECRET")
                 .unwrap_or("5577ec38-4a60-46eb-8498-b810323fccb8"),
         ))
