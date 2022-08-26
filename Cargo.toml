@@ -9,3 +9,6 @@ bevy = "0.8"
 rand = {version = "0.8", features = ["small_rng"]}
 bevy_jornet = "0.1.3"
 glam = { version = "0.21"}
+
+[patch.crates-io]
+wgpu = { git = "https://github.com/mockersf/wgpu/", branch = "unconditional-clear-workaround" }
