@@ -184,7 +184,20 @@ fn display_scores(
         if let Some(player) = leaderboard.get_player() {
             player_name.single_mut().sections[1].value = player.name.clone();
         }
-        let leaderboard = leaderboard.get_leaderboard();
+        let mut leaderboard = leaderboard.get_leaderboard();
+        leaderboard.sort_unstable_by(|s1, s2| s2.score.partial_cmp(&s1.score).unwrap());
+        let mut i = 0;
+        while i < leaderboard.len() {
+            if leaderboard[..i]
+                .iter()
+                .any(|s| s.player == leaderboard[i].player)
+            {
+                let val = leaderboard.remove(i);
+            } else {
+                i += 1;
+            }
+        }
+        leaderboard.truncate(10);
         for (root_entity, marker) in &root_ui {
             commands.entity(root_entity).despawn_descendants();
             for score in &leaderboard {
